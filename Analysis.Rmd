@@ -30,88 +30,140 @@ library(rgdal)
 library(sf)
 atlas <- read_csv('food_access_research_atlas.csv')
 obesity_shape <- readOGR(".", "Obesity_in_Adults_-_CDPHE_Community_Level_Estimates_(Census_Tracts)")
-race <- read_csv('acs2020_5yr_B03002_race.csv')
-mobility <- read_csv('acs2020_5yr_B07003_geographic_mobility.csv')
-education <- read_csv('acs2020_5yr_B15003_education.csv')
-poverty <- read_csv('acs2020_5yr_B17001_poverty.csv')
-pop <- read_csv('acs2020_5yr_B01003_population.csv')
-
-# also need column dictionaries
-
-library(rjson)
-mobility_dict <- fromJSON(file='mobility_metadata.json')
-race_dict <- fromJSON(file='race_metadata.json')
-education_dict <- fromJSON(file='education_metadata.json')
-poverty_dict <- fromJSON(file='poverty_metadata.json')
+race <- read_csv('ACS_2019_race.csv')
+mobility <- read_csv('ACS_2019_mobility.csv')
+education <- read_csv('ACS_2019_education.csv')
+poverty <- read_csv('ACS_2019_poverty.csv')
+pop <- read_csv('ACS_2019_population.csv')
 ```
 The data manipulation step will join together the ACS data all using the population dataframe as the basis. Afterwards we'll create the ratios - variables divided by the overall population. Also will then rename the geoid column after all the joins. This is so it is consistent with the other two files; easier to rename only once after doing all the joins
 ```{r manipulate & combine data}
 library(dplyr)
-names(pop)[names(pop) == 'B01003001'] <- "population"
+names(pop)[names(pop) == 'B01003_001E'] <- "population"
 pop <- pop %>%
-  select(geoid, name, population)
+  select(GEO_ID, NAME, population)
 
 # this field indicates how many people are in the same household as the previous year
-names(mobility)[names(mobility) == 'B07003004'] <- "unmoved"
+names(mobility)[names(mobility) == 'B07003_004E'] <- "unmoved"
 
 mobility <- mobility %>%
-  select(geoid, unmoved)
+  select(GEO_ID, unmoved)
 
 
 # this field indicates how many people were under the poverty line
-names(poverty)[names(poverty) == 'B17001002'] <- "poverty"
+names(poverty)[names(poverty) == 'B17001_002E'] <- "poverty"
 
 poverty <- poverty %>%
-  select(geoid, poverty)
+  select(GEO_ID, poverty)
 
 
 # field indicating count of all white-only individuals
-names(race)[names(race) == 'B03002003'] <- "white"
+names(race)[names(race) == 'B03002_003E'] <- "white"
 
 race <- race %>%
-  select(geoid, white)
+  select(GEO_ID, white)
 
 # create variables that find how many people graduated HS or have a bachelor's degree
 educ2 <- education %>%
   rowwise() %>%
-  mutate(hs_education = sum(c(B15003017, B15003018, B15003019, B15003020, B15003021, B15003022, B15003023, B15003024, B15003025))) %>%
-  mutate(bachelors_degree = sum(c(B15003022, B15003023, B15003024, B15003025)))
+  mutate(hs_education = sum(c(B15003_017E, B15003_018E, B15003_019E, B15003_020E, B15003_021E, B15003_022E, B15003_023E, B15003_024E, B15003_025E))) %>%
+  mutate(bachelors_degree = sum(c(B15003_022E, B15003_023E, B15003_024E, B15003_025E)))
 
 educ2 <- educ2 %>%
-  select(geoid, hs_education, bachelors_degree)
+  select(GEO_ID, hs_education, bachelors_degree)
 
 # begin merging the datasets
-pop2 <- merge(pop, mobility, by = "geoid")
+pop2 <- merge(pop, mobility, by = "GEO_ID")
 
-pop3 <- merge(pop2, poverty, by = "geoid")
+pop3 <- merge(pop2, poverty, by = "GEO_ID")
 
-pop4 <- merge(pop3, race, by = "geoid")
+pop4 <- merge(pop3, race, by = "GEO_ID")
 
-acs_pop <- merge(pop4, educ2, by = "geoid")
+acs_pop <- merge(pop4, educ2, by = "GEO_ID")
 
-acs_pop
+acs_pop$unmoved_pct <- (acs_pop$unmoved / acs_pop$population)
+acs_pop$poverty_pct <- (acs_pop$poverty / acs_pop$population)
+acs_pop$minority_pct <- (1 - (acs_pop$white / acs_pop$population))
+acs_pop$hs_education_pct <- (acs_pop$hs_education / acs_pop$population)
+acs_pop$bachelors_degree_pct <- (acs_pop$bachelors_degree / acs_pop$population)
 
 acs_pop <- acs_pop %>%
-  mutate(geo_id = substr(geoid, nchar(geoid)-11+1, nchar(geoid)))
+  mutate(GEO_ID = substr(GEO_ID, nchar(GEO_ID)-11+1, nchar(GEO_ID)))
 
 acs_pop
 ```
 ```{r merge food desert data}
-#atlas <- atlas %>%
-#  filter(State == 'Colorado') %>%
-#  select(CensusTract, LA1and10)
+atlas <- atlas %>%
+  filter(State == 'Colorado') %>%
+  select(CensusTract, LA1and10)
 
 atlas
   
-acs_pop_w_deserts <- merge(acs_pop, atlas, by.x = "geo_id", by.y = "CensusTract")
+acs_pop_w_deserts <- merge(acs_pop, atlas, by.x = "GEO_ID", by.y = "CensusTract")
 
 acs_pop_w_deserts
 
-final_shape <- merge(obesity_shape, acs_pop_w_deserts, by.x = "Census_Tra", by.y ="geo_id")
+final_shape <- merge(obesity_shape, acs_pop_w_deserts, by.x = "Census_Tra", by.y ="GEO_ID")
 
-# there are a number of census tracts that the ACS did not provide data for
+# no missing data points!
 sum(is.na(final_shape$population))
 ```
-```{r some visualizations}
+```{r population visualization}
+library(leaflet)
+library(htmltools)
+#bins <-c(0,100,200,500,1000,1500,2000,2500,3000,3500,4000)
+pal <-colorBin("YlOrRd", domain=final_shape$population)
 
+labels <- sprintf(
+  "<strong>%s</strong><br/>Population: %g",
+  final_shape$Census_Tra, final_shape$population
+) %>% lapply(htmltools::HTML)
+
+
+leaflet(final_shape) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(
+    fillColor = ~pal(population),
+    weight = 2,
+    opacity = 1,
+    color = "gray",
+    fillOpacity = 0.8,
+    highlightOptions = highlightOptions(
+    weight = 5,
+    color = "#666",
+    fillOpacity = 0.8),
+    label = labels,
+    labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px"),
+                                          textsize = "15px",
+                                          direction = "auto")) %>%
+  addLegend(pal=pal, values = ~population, opacity = 0.8, title = "Population by Census Tract")
+```
+
+```{r visu}
+bins <-c(0,0.25,0.5,0.75,1)
+pal <-colorBin("Greens", domain=final_shape$minority_pct, bins)
+
+labels <- sprintf(
+  "<strong>%s</strong><br/>Minority Percentage: %g",
+  final_shape$Census_Tra, final_shape$minority_pct
+) %>% lapply(htmltools::HTML)
+
+
+leaflet(final_shape) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%
+  addPolygons(
+    fillColor = ~pal(minority_pct),
+    weight = 2,
+    opacity = 1,
+    color = "gray",
+    fillOpacity = 0.8,
+    highlightOptions = highlightOptions(
+    weight = 5,
+    color = "#666",
+    fillOpacity = 0.8),
+    label = labels,
+    labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px"),
+                                          textsize = "15px",
+                                          direction = "auto")) %>%
+  addLegend(pal=pal, values = ~minority_pct, opacity = 0.8, title = "Minority Percentage by Census Tract")
 ```
