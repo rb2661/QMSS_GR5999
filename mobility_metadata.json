@@ -1,0 +1,88 @@
+{
+    "release": {
+        "id": "acs2020_5yr",
+        "years": "2016-2020",
+        "name": "ACS 2020 5-year"
+    },
+    "tables": {
+        "B07003": {
+            "title": "Geographical Mobility in the Past Year by Sex for Current Residence in the United States",
+            "universe": "Population 1 Year and Over in the United States",
+            "denominator_column_id": "B07003001",
+            "columns": {
+                "B07003001": {
+                    "name": "Total:",
+                    "indent": 0
+                },
+                "B07003002": {
+                    "name": "Male",
+                    "indent": 1
+                },
+                "B07003003": {
+                    "name": "Female",
+                    "indent": 1
+                },
+                "B07003004": {
+                    "name": "Same house 1 year ago:",
+                    "indent": 1
+                },
+                "B07003005": {
+                    "name": "Male",
+                    "indent": 2
+                },
+                "B07003006": {
+                    "name": "Female",
+                    "indent": 2
+                },
+                "B07003007": {
+                    "name": "Moved within same county:",
+                    "indent": 1
+                },
+                "B07003008": {
+                    "name": "Male",
+                    "indent": 2
+                },
+                "B07003009": {
+                    "name": "Female",
+                    "indent": 2
+                },
+                "B07003010": {
+                    "name": "Moved from different county within same state:",
+                    "indent": 1
+                },
+                "B07003011": {
+                    "name": "Male",
+                    "indent": 2
+                },
+                "B07003012": {
+                    "name": "Female",
+                    "indent": 2
+                },
+                "B07003013": {
+                    "name": "Moved from different state:",
+                    "indent": 1
+                },
+                "B07003014": {
+                    "name": "Male",
+                    "indent": 2
+                },
+                "B07003015": {
+                    "name": "Female",
+                    "indent": 2
+                },
+                "B07003016": {
+                    "name": "Moved from abroad:",
+                    "indent": 1
+                },
+                "B07003017": {
+                    "name": "Male",
+                    "indent": 2
+                },
+                "B07003018": {
+                    "name": "Female",
+                    "indent": 2
+                }
+            }
+        }
+    }
+}
