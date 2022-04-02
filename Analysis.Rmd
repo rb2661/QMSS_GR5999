@@ -90,4 +90,24 @@ pop4 <- merge(pop3, race, by = "geoid")
 acs_pop <- merge(pop4, educ2, by = "geoid")
 
 acs_pop
+
+acs_pop <- acs_pop %>%
+  mutate(geo_id = substr(geoid, nchar(geoid)-11+1, nchar(geoid)))
+
+acs_pop
+```
+```{r merge food desert data}
+#atlas <- atlas %>%
+#  filter(State == 'Colorado') %>%
+#  select(CensusTract, LA1and10)
+
+atlas
+  
+acs_pop_w_deserts <- merge(acs_pop, atlas, by.x = "geo_id", by.y = "CensusTract")
+
+acs_pop_w_deserts
+
+final_shape <- merge(obesity_shape, acs_pop_w_deserts, by.x = "Census_Tra", by.y ="geo_id")
+
+final_shape
 ```
