@@ -109,5 +109,9 @@ acs_pop_w_deserts
 
 final_shape <- merge(obesity_shape, acs_pop_w_deserts, by.x = "Census_Tra", by.y ="geo_id")
 
-final_shape
+# there are a number of census tracts that the ACS did not provide data for
+sum(is.na(final_shape$population))
+```
+```{r some visualizations}
+
 ```
