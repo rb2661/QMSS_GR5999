@@ -22,6 +22,8 @@ Race will transform into white % only (white vs non white essentially)
 
 All the ACS files have a lead-in to the Census Tract # that differs from the atlas and obesity files
 
+All the files give a raw number instead of a percentage; we pull in the population data too
+
 ```{r Pull in all data}
 library(tidyverse)
 library(rgdal)
@@ -32,7 +34,60 @@ race <- read_csv('acs2020_5yr_B03002_race.csv')
 mobility <- read_csv('acs2020_5yr_B07003_geographic_mobility.csv')
 education <- read_csv('acs2020_5yr_B15003_education.csv')
 poverty <- read_csv('acs2020_5yr_B17001_poverty.csv')
+pop <- read_csv('acs2020_5yr_B01003_population.csv')
+
+# also need column dictionaries
+
+library(rjson)
+mobility_dict <- fromJSON(file='mobility_metadata.json')
+race_dict <- fromJSON(file='race_metadata.json')
+education_dict <- fromJSON(file='education_metadata.json')
+poverty_dict <- fromJSON(file='poverty_metadata.json')
 ```
-```{r check data}
-obesity_shape
+The data manipulation step will join together the ACS data all using the population dataframe as the basis. Afterwards we'll create the ratios - variables divided by the overall population. Also will then rename the geoid column after all the joins. This is so it is consistent with the other two files; easier to rename only once after doing all the joins
+```{r manipulate & combine data}
+library(dplyr)
+names(pop)[names(pop) == 'B01003001'] <- "population"
+pop <- pop %>%
+  select(geoid, name, population)
+
+# this field indicates how many people are in the same household as the previous year
+names(mobility)[names(mobility) == 'B07003004'] <- "unmoved"
+
+mobility <- mobility %>%
+  select(geoid, unmoved)
+
+
+# this field indicates how many people were under the poverty line
+names(poverty)[names(poverty) == 'B17001002'] <- "poverty"
+
+poverty <- poverty %>%
+  select(geoid, poverty)
+
+
+# field indicating count of all white-only individuals
+names(race)[names(race) == 'B03002003'] <- "white"
+
+race <- race %>%
+  select(geoid, white)
+
+# create variables that find how many people graduated HS or have a bachelor's degree
+educ2 <- education %>%
+  rowwise() %>%
+  mutate(hs_education = sum(c(B15003017, B15003018, B15003019, B15003020, B15003021, B15003022, B15003023, B15003024, B15003025))) %>%
+  mutate(bachelors_degree = sum(c(B15003022, B15003023, B15003024, B15003025)))
+
+educ2 <- educ2 %>%
+  select(geoid, hs_education, bachelors_degree)
+
+# begin merging the datasets
+pop2 <- merge(pop, mobility, by = "geoid")
+
+pop3 <- merge(pop2, poverty, by = "geoid")
+
+pop4 <- merge(pop3, race, by = "geoid")
+
+acs_pop <- merge(pop4, educ2, by = "geoid")
+
+acs_pop
 ```
