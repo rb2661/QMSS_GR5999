@@ -1,0 +1,38 @@
+---
+title: "Thesis Analysis"
+author: "Rory Butler"
+date: "4/02/2022"
+output: 
+  html_document:
+    keep_md: true
+    toc: true
+---
+```{r global options, include=FALSE, echo=FALSE}
+knitr::opts_chunk$set(include=TRUE, warning=FALSE, message=FALSE, echo=FALSE)
+```
+
+## Pulling in all the data and transforming as needed
+The food atlas data needs to be restricted to Colorado only
+Shape file shouldn't need to be restricted
+
+Poverty data we only need to keep poverty % value for each census tract
+Education will need to transform into fewer categories and ultimately use just one split (college or not, probably)
+Geographic mobility will transform into moved or didn't move
+Race will transform into white % only (white vs non white essentially)
+
+All the ACS files have a lead-in to the Census Tract # that differs from the atlas and obesity files
+
+```{r Pull in all data}
+library(tidyverse)
+library(rgdal)
+library(sf)
+atlas <- read_csv('food_access_research_atlas.csv')
+obesity_shape <- readOGR(".", "Obesity_in_Adults_-_CDPHE_Community_Level_Estimates_(Census_Tracts)")
+race <- read_csv('acs2020_5yr_B03002_race.csv')
+mobility <- read_csv('acs2020_5yr_B07003_geographic_mobility.csv')
+education <- read_csv('acs2020_5yr_B15003_education.csv')
+poverty <- read_csv('acs2020_5yr_B17001_poverty.csv')
+```
+```{r check data}
+obesity_shape
+```
