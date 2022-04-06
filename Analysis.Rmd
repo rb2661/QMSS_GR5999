@@ -93,9 +93,9 @@ acs_pop <- acs_pop %>%
 acs_pop
 ```
 ```{r merge food desert data}
-atlas <- atlas %>%
-  filter(State == 'Colorado') %>%
-  select(CensusTract, LA1and10)
+#atlas <- atlas %>%
+#  filter(State == 'Colorado') %>%
+#  select(CensusTract, LA1and10, LAPOP1_10)
 
 atlas
   
@@ -103,10 +103,17 @@ acs_pop_w_deserts <- merge(acs_pop, atlas, by.x = "GEO_ID", by.y = "CensusTract"
 
 acs_pop_w_deserts
 
+acs_pop_w_deserts$food_desert_pct <- (acs_pop$LAPOP_10 / acs_pop_w_deserts$population)
+
 final_shape <- merge(obesity_shape, acs_pop_w_deserts, by.x = "Census_Tra", by.y ="GEO_ID")
+
+#normalize as percentage
+final_shape$Obese_Cens <- (final_shape$Obese_Cens / 100)
 
 # no missing data points!
 sum(is.na(final_shape$population))
+
+writeOGR(final_shape, ".", "CO_Obesity", driver="ESRI Shapefile")
 ```
 ```{r population visualization}
 library(leaflet)
@@ -138,21 +145,23 @@ leaflet(final_shape) %>%
                                           direction = "auto")) %>%
   addLegend(pal=pal, values = ~population, opacity = 0.8, title = "Population by Census Tract")
 ```
-
-```{r visu}
-bins <-c(0,0.25,0.5,0.75,1)
-pal <-colorBin("Greens", domain=final_shape$minority_pct, bins)
+```{r t}
+head(final_shape)
+```
+```{r visu 2}
+bins <-c(0,0.1,0.2,0.3,0.4,1)
+pal <-colorBin("YlOrRd", domain=final_shape$Obese_Cens, bins)
 
 labels <- sprintf(
-  "<strong>%s</strong><br/>Minority Percentage: %g",
-  final_shape$Census_Tra, final_shape$minority_pct
+  "<strong>%s</strong><br/>Population: %g",
+  final_shape$Census_Tra, final_shape$Obese_Cens
 ) %>% lapply(htmltools::HTML)
 
 
 leaflet(final_shape) %>%
   addProviderTiles(providers$CartoDB.Positron) %>%
   addPolygons(
-    fillColor = ~pal(minority_pct),
+    fillColor = ~pal(Obese_Cens),
     weight = 2,
     opacity = 1,
     color = "gray",
@@ -165,5 +174,7 @@ leaflet(final_shape) %>%
     labelOptions = labelOptions(style = list("font-weight" = "normal", padding = "3px 8px"),
                                           textsize = "15px",
                                           direction = "auto")) %>%
-  addLegend(pal=pal, values = ~minority_pct, opacity = 0.8, title = "Minority Percentage by Census Tract")
+  addLegend(pal=pal, values = ~Obese_Cens, opacity = 0.8, title = "Obesity Percentage by Census Tract")
+```
+```{r analysis time}
 ```
